@@ -17,12 +17,21 @@ def index():
 @app.route('/combatant/<identifier>')
 def combatant(identifier=None):
     #give them combatants.html
+
     if (identifier == None):
+        #If no identifier was passed, pull all combatants
         cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = species.id;')
         combatants = cur.fetchall()
-    else:
+
+    elif (identifier.isnumeric()):
+        #If a numeric identifier was passed, pull combatant X
         cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = %s AND combatant.species_id = species.id;', identifier)
         combatants = cur.fetchall()
+
+    else:
+        #If a non-numeric identifier was passed, URL Not found.
+        abort(404)
+
     class Combatant:
         def __init__(self, name, ident, species):
             self.name = name
