@@ -16,7 +16,7 @@
 			{% for fight in fights %}
 			<tr>
 				<td><a href="/combatant/{{ fight.one_id }}">{{ fight.one_name }}</a> vs.</td>
-				<a href="/combatant/{{ fight.two_id }}">{{ fight.two_name }}</a></td>
+				<td><a href="/combatant/{{ fight.two_id }}">{{ fight.two_name }}</a></td>
 				<td>{{ fight.winner }}</td>
 			</tr>
 			{% endfor %}
