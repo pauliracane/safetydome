@@ -20,12 +20,17 @@ def combatant(identifier=None):
 
     if (identifier == None):
         #If no identifier was passed, pull all combatants
-        cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = species.id;')
+        cur.execute('SELECT combatant.name, combatant.id, species.name \
+                FROM public.combatant, public.species \
+                WHERE combatant.species_id = species.id;')
         combatants = cur.fetchall()
 
     elif (identifier.isnumeric()):
         #If a numeric identifier was passed, pull combatant X
-        cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = %s AND combatant.species_id = species.id;', identifier)
+        cur.execute('SELECT combatant.name, combatant.id, species.name \
+                FROM public.combatant, public.species \
+                WHERE combatant.species_id = %s AND \
+                combatant.species_id = species.id;', identifier)
         combatants = cur.fetchall()
 
     else:
@@ -33,9 +38,9 @@ def combatant(identifier=None):
         abort(404)
 
     class Combatant:
-        def __init__(self, name, ident, species):
+        def __init__(self, name, id, species):
             self.name = name
-            self.ident = ident
+            self.ident = id
             self.species = species
     TheRealCombatants = []
     for each in combatants:
@@ -49,11 +54,32 @@ def combatant(identifier=None):
 def battle(identifier1=None, identifier2=None):
     #Give them battle.html
     if (identifier1 == None or identifier2 == None):
-        cur.execute("SELECT fight.combatant_one, fight.combatant_two, fight.winner, (select combatant.name from public.combatant WHERE combatant.id = fight.combatant_one),(SELECT combatant.name from public.combatant WHERE combatant.id = fight.combatant_two) FROM public.fight, public.combatant")
+        cur.execute("SELECT fight.combatant_one, fight.combatant_two, \
+                fight.winner, \
+                (SELECT combatant.name \
+                FROM public.combatant \
+                WHERE combatant.id = fight.combatant_one),\
+                (SELECT combatant.name \
+                FROM public.combatant \
+                WHERE combatant.id = fight.combatant_two) \
+                FROM public.fight, public.combatant\
+                ORDER BY fight.combatant_one ASC")
         fight = cur.fetchall()
         
     elif (identifier1.isnumeric() and identifier2.isnumeric()):
-        cur.execute("SELECT fight.combatant_one, fight.combatant_two, fight.winner, (select combatant.name from public.combatant WHERE combatant.id = fight.combatant_one),(SELECT combatant.name from public.combatant WHERE combatant.id = fight.combatant_two) FROM public.fight, public.combatant WHERE fight.combatant_one = %s and fight.combatant_two = %s", [identifier1, identifier2])
+        cur.execute("SELECT fight.combatant_one, fight.combatant_two, \
+                fight.winner, \
+                (SELECT combatant.name \
+                FROM public.combatant \
+                WHERE combatant.id = fight.combatant_one),\
+                (SELECT combatant.name \
+                FROM public.combatant \
+                WHERE combatant.id = fight.combatant_two) \
+                FROM public.fight, public.combatant \
+                WHERE fight.combatant_one = %s and fight.combatant_two = %s\
+                OR fight.combatant_one = %s and fight.combatant_two = %s\
+                ORDER BY fight.combatant_one ASC", \
+                [identifier1, identifier2, identifier2, identifier1])
         fight = cur.fetchall()
     else:
         abort(404)
@@ -76,7 +102,36 @@ def battle(identifier1=None, identifier2=None):
 @app.route('/results/')
 def results():
     #call results.html
-    return render_template('results.html')
+    #Bart told me the idea, and explained how it worked. Implemented solo
+    cur.execute("SELECT count(fight.combatant_one), combatant.name, \
+            combatant.id\
+            FROM (SELECT fight.combatant_one\
+            FROM public.fight\
+            WHERE fight.winner = 'One'\
+            UNION all\
+            SELECT fight.combatant_two\
+            FROM public.fight\
+            WHERE fight.winner = 'Two') as fight,\
+            public.combatant\
+            WHERE fight.combatant_one = combatant.id\
+            GROUP BY combatant.name, combatant.id\
+            ORDER BY count DESC")
+
+    Winners = cur.fetchall()
+    
+    class CombatantStats:
+        def __init__(self, rank, id, name, wins):
+            self.rank = rank
+            self.id = id
+            self.name = name
+            self.wins = wins
+    
+    ListOfCombatants = []
+    for each in Winners:
+        x = CombatantStats(len(ListOfCombatants)+1,each[2],each[1],each[0])
+        ListOfCombatants.append(x)
+
+    return render_template('results.html', combatants = ListOfCombatants)
 
 if __name__ == '__main__':
     #Connect to database
