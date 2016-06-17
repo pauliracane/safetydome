@@ -17,8 +17,12 @@ def index():
 @app.route('/combatant/<identifier>')
 def combatant(identifier=None):
     #give them combatants.html
-    cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = species.id;')
-    combatants = cur.fetchall()
+    if (identifier == None):
+        cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = species.id;')
+        combatants = cur.fetchall()
+    else:
+        cur.execute('SELECT combatant.name, combatant.id, species.name FROM public.combatant, public.species WHERE combatant.species_id = %s AND combatant.species_id = species.id;', identifier)
+        combatants = cur.fetchall()
     class Combatant:
         def __init__(self, name, ident, species):
             self.name = name
